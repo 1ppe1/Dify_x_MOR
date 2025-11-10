@@ -1,0 +1,17 @@
+name: Run Dify Workflow
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # 毎日0時（日本時間にしたい場合は調整が必要）
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Dify Workflow
+        run: |
+          curl -X POST "https://api.dify.ai/v1/workflows/{workflow_id}/run" \
+          -H "Authorization: Bearer ${{ secrets.DIFY_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}'
