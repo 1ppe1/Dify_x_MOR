@@ -1,0 +1,47 @@
+name: Run Dify Workflow
+
+on:
+  schedule:
+    # 例: 毎時0分（UTC）。バンコク時間(UTC+7)で毎時0分にしたいなら "0 * * * *" のままでOK
+    - cron: "0 * * * *"
+  workflow_dispatch: {}  # 手動実行ボタン
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install jq (ensure)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Call Dify Workflow
+        id: call
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+          DIFY_BASE_URL: https://api.dify.ai/v1
+        run: |
+          set -e
+          # ここに必要ならワークフローへ渡す入力を入れる（空でOK）
+          INPUTS='{}'   # 例: INPUTS='{"keyword":"東京"}'
+
+          # 実行（blockingモード）
+          RESP=$(curl -sS -X POST "$DIFY_BASE_URL/workflows/run" \
+            -H "Authorization: Bearer $DIFY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --argjson inputs "$INPUTS" \
+                   --arg mode "blocking" \
+                   --arg user "github-actions" \
+                   '{inputs: $inputs, response_mode: $mode, user: $user}')" )
+          echo "$RESP" | jq .
+
+          # 後続ステップ用にIDをエクスポート
+          echo "workflow_run_id=$(echo "$RESP" | jq -r '.workflow_run_id')" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch run detail (optional)
+        if: steps.call.outputs.workflow_run_id != ''
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+          DIFY_BASE_URL: https://api.dify.ai/v1
+        run: |
+          curl -sS -X GET "$DIFY_BASE_URL/workflows/run/${{ steps.call.outputs.workflow_run_id }}" \
+            -H "Authorization: Bearer $DIFY_API_KEY" \
+          | jq .
