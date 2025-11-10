@@ -2,8 +2,8 @@ name: Run Dify Workflow
 
 on:
   schedule:
-    # 例: 毎時0分（UTC）。バンコク時間(UTC+7)で毎時0分にしたいなら "0 * * * *" のままでOK
-    - cron: "0 * * * *"
+    # 毎日 23:00 UTC -> 翌日 08:00 JST
+    - cron: "0 23 * * *"
   workflow_dispatch: {}  # 手動実行ボタン
 
 jobs:
@@ -20,10 +20,7 @@ jobs:
           DIFY_BASE_URL: https://api.dify.ai/v1
         run: |
           set -e
-          # ここに必要ならワークフローへ渡す入力を入れる（空でOK）
-          INPUTS='{}'   # 例: INPUTS='{"keyword":"東京"}'
-
-          # 実行（blockingモード）
+          INPUTS='{}'
           RESP=$(curl -sS -X POST "$DIFY_BASE_URL/workflows/run" \
             -H "Authorization: Bearer $DIFY_API_KEY" \
             -H "Content-Type: application/json" \
@@ -32,8 +29,6 @@ jobs:
                    --arg user "github-actions" \
                    '{inputs: $inputs, response_mode: $mode, user: $user}')" )
           echo "$RESP" | jq .
-
-          # 後続ステップ用にIDをエクスポート
           echo "workflow_run_id=$(echo "$RESP" | jq -r '.workflow_run_id')" >> "$GITHUB_OUTPUT"
 
       - name: Fetch run detail (optional)
